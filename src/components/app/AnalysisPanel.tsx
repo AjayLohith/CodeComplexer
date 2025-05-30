@@ -41,7 +41,7 @@ export function AnalysisPanel({
           <Info className="h-4 w-4" />
           <AlertTitle>No Best Practices Available</AlertTitle>
           <AlertDescription>
-            Enter some code and click "Get Best Practices" to see AI suggestions.
+            Enter some code and click "Suggestions" to see AI suggestions.
           </AlertDescription>
         </Alert>
       );
@@ -140,10 +140,11 @@ export function AnalysisPanel({
             <TabsTrigger value="best-practices"><CheckCircle2 className="mr-1 h-4 w-4 inline-block"/>Practices</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="complexity" className="flex-grow overflow-auto">
+          {/* Removed overflow-auto from TabsContent, relying on ScrollArea within */}
+          <TabsContent value="complexity" className="flex-grow">
             {renderComplexityAnalysis()}
           </TabsContent>
-          <TabsContent value="best-practices" className="flex-grow overflow-auto">
+          <TabsContent value="best-practices" className="flex-grow">
             {renderBestPractices()}
           </TabsContent>
         </Tabs>
