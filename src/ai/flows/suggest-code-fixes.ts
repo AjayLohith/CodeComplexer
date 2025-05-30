@@ -32,6 +32,9 @@ export async function suggestCodeFixes(input: SuggestCodeFixesInput): Promise<Su
 const PromptTemplateInputSchema = SuggestCodeFixesInputSchema.extend({
   languageId: z.string().describe('The programming language identifier, in lowercase.'),
 });
+// This type is not exported as it's internal to the flow
+// type PromptTemplateInput = z.infer<typeof PromptTemplateInputSchema>;
+
 
 const prompt = ai.definePrompt({
   name: 'suggestCodeFixesPrompt',

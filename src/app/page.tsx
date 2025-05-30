@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Header } from '@/components/app/Header';
 import { MainLayout } from '@/components/app/MainLayout';
 import { CodeEditorPanel } from '@/components/app/CodeEditorPanel';
@@ -9,7 +9,15 @@ import { AnalysisPanel } from '@/components/app/AnalysisPanel';
 import { suggestCodeFixes, type SuggestCodeFixesInput } from '@/ai/flows/suggest-code-fixes';
 import { suggestBestPractices, type SuggestBestPracticesInput } from '@/ai/flows/suggest-best-practices';
 import { analyzeCodeComplexity, type AnalyzeCodeComplexityInput, type AnalyzeCodeComplexityOutput } from '@/ai/flows/analyze-code-complexity';
+import { verifyCodeLanguage, type VerifyCodeLanguageInput, type VerifyCodeLanguageOutput } from '@/ai/flows/verify-code-language';
 import { useToast } from '@/hooks/use-toast';
+
+const availableLanguages = [
+  { value: 'python', label: 'Python' },
+  { value: 'javascript', label: 'JavaScript' },
+  { value: 'cpp', label: 'C++' },
+  { value: 'java', label: 'Java' },
+];
 
 const languageMapForFixes: { [key: string]: 'Python' | 'JavaScript' | 'C++' | 'Java' } = {
   python: 'Python',
@@ -18,12 +26,13 @@ const languageMapForFixes: { [key: string]: 'Python' | 'JavaScript' | 'C++' | 'J
   java: 'Java',
 };
 
-const languageMapForComplexity: { [key: string]: 'python' | 'javascript' | 'cpp' | 'java' } = {
+const languageMapForAnalysis: { [key: string]: 'python' | 'javascript' | 'cpp' | 'java' } = {
   python: 'python',
   javascript: 'javascript',
   cpp: 'cpp',
   java: 'java',
 };
+
 
 export default function CodeSightPage() {
   const [code, setCode] = useState<string>('');
@@ -37,14 +46,78 @@ export default function CodeSightPage() {
   const [isLoadingFixes, setIsLoadingFixes] = useState<boolean>(false);
   const [isLoadingBestPractices, setIsLoadingBestPractices] = useState<boolean>(false);
   const [isLoadingComplexity, setIsLoadingComplexity] = useState<boolean>(false);
+  
+  const [languageMismatchError, setLanguageMismatchError] = useState<string | null>(null);
+  const [isVerifyingLanguage, setIsVerifyingLanguage] = useState<boolean>(false);
 
   const { toast } = useToast();
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Placeholder state for features not yet implemented
-  const [syntaxErrors, setSyntaxErrors] = useState<string[]>([]);
+  const getLanguageLabel = (value: string): string => {
+    const lang = availableLanguages.find(l => l.value === value);
+    return lang ? lang.label : value;
+  };
+
+  const handleVerifyLanguage = useCallback(async (currentCode: string, currentLanguage: string) => {
+    if (!currentCode.trim()) {
+      setLanguageMismatchError(null);
+      return;
+    }
+    setIsVerifyingLanguage(true);
+    setLanguageMismatchError(null); // Clear previous error
+
+    try {
+      const langForVerification = languageMapForAnalysis[currentLanguage];
+      if (!langForVerification) {
+        throw new Error("Invalid language selected for verification.");
+      }
+      const input: VerifyCodeLanguageInput = {
+        code: currentCode,
+        expectedLanguage: langForVerification,
+      };
+      const result = await verifyCodeLanguage(input);
+      if (!result.isMatch) {
+        setLanguageMismatchError(
+          `AI suggests this might not be ${getLanguageLabel(currentLanguage)} code. ${result.reasoning || ''} ${result.actualLanguage ? `Detected: ${getLanguageLabel(result.actualLanguage)} (${result.confidence || 'N/A'}).` : ''}`
+        );
+      } else {
+        setLanguageMismatchError(null);
+      }
+    } catch (error) {
+      console.error("Error verifying code language:", error);
+      toast({
+        title: "Language Check Failed",
+        description: `Could not verify code language. ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive",
+      });
+      // Optionally set a generic mismatch error or allow proceeding
+      // setLanguageMismatchError("Could not automatically verify the code's language.");
+    } finally {
+      setIsVerifyingLanguage(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    debounceTimeoutRef.current = setTimeout(() => {
+      handleVerifyLanguage(code, selectedLanguage);
+    }, 1000); // 1-second debounce
+
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, [code, selectedLanguage, handleVerifyLanguage]);
 
 
   const handleGetFixSuggestions = useCallback(async () => {
+    if (languageMismatchError) {
+       toast({ title: "Language Mismatch", description: "Cannot get suggestions due to language mismatch.", variant: "destructive" });
+       return;
+    }
     if (!code || !errorMessage) {
       toast({
         title: "Input Missing",
@@ -81,9 +154,13 @@ export default function CodeSightPage() {
     } finally {
       setIsLoadingFixes(false);
     }
-  }, [code, selectedLanguage, errorMessage, toast]);
+  }, [code, selectedLanguage, errorMessage, toast, languageMismatchError]);
 
   const handleGetBestPractices = useCallback(async () => {
+     if (languageMismatchError) {
+       toast({ title: "Language Mismatch", description: "Cannot get best practices due to language mismatch.", variant: "destructive" });
+       return;
+    }
     if (!code) {
       toast({
         title: "Code Missing",
@@ -95,9 +172,13 @@ export default function CodeSightPage() {
     setIsLoadingBestPractices(true);
     setBestPractices([]);
     try {
+      const langForAnalysis = languageMapForAnalysis[selectedLanguage];
+       if (!langForAnalysis) {
+        throw new Error("Invalid language selected for best practices analysis.");
+      }
       const input: SuggestBestPracticesInput = { 
         code, 
-        language: selectedLanguage as 'python' | 'javascript' | 'cpp' | 'java' 
+        language: langForAnalysis 
       };
       const result = await suggestBestPractices(input);
       setBestPractices(result.suggestions);
@@ -115,9 +196,13 @@ export default function CodeSightPage() {
     } finally {
       setIsLoadingBestPractices(false);
     }
-  }, [code, selectedLanguage, toast]);
+  }, [code, selectedLanguage, toast, languageMismatchError]);
 
   const handleAnalyzeComplexity = useCallback(async () => {
+     if (languageMismatchError) {
+       toast({ title: "Language Mismatch", description: "Cannot analyze complexity due to language mismatch.", variant: "destructive" });
+       return;
+    }
     if (!code) {
       toast({
         title: "Code Missing",
@@ -129,7 +214,7 @@ export default function CodeSightPage() {
     setIsLoadingComplexity(true);
     setComplexityAnalysisResult(null);
     try {
-      const langForComplexity = languageMapForComplexity[selectedLanguage];
+      const langForComplexity = languageMapForAnalysis[selectedLanguage];
       if (!langForComplexity) {
         throw new Error("Invalid language selected for complexity analysis.");
       }
@@ -143,7 +228,8 @@ export default function CodeSightPage() {
         title: "Complexity Analysis Complete",
         description: "AI has estimated the code's complexity.",
       });
-    } catch (error) {
+    } catch (error)
+     {
       console.error("Error analyzing complexity:", error);
       toast({
         title: "Error",
@@ -153,17 +239,14 @@ export default function CodeSightPage() {
     } finally {
       setIsLoadingComplexity(false);
     }
-  }, [code, selectedLanguage, toast]);
+  }, [code, selectedLanguage, toast, languageMismatchError]);
 
-  const handleRunCode = () => {
-    toast({ title: "Feature Not Implemented", description: "Code execution is coming soon!"});
-  };
-
-  // Effect to clear results when language changes
+  // Effect to clear results and errors when language changes (but not the mismatch error itself from this effect)
   useEffect(() => {
     setFixSuggestions([]);
     setBestPractices([]);
     setComplexityAnalysisResult(null);
+    // setLanguageMismatchError(null); // This is handled by the debounced effect
   }, [selectedLanguage]);
 
   return (
@@ -176,22 +259,24 @@ export default function CodeSightPage() {
             onCodeChange={setCode}
             selectedLanguage={selectedLanguage}
             onLanguageChange={setSelectedLanguage}
+            languages={availableLanguages}
             errorMessage={errorMessage}
             onErrorMessageChange={setErrorMessage}
-            onRunCode={handleRunCode}
             onAnalyzeComplexity={handleAnalyzeComplexity}
             onGetFixSuggestions={handleGetFixSuggestions}
             onGetBestPractices={handleGetBestPractices}
             isFixesLoading={isLoadingFixes}
             isBestPracticesLoading={isLoadingBestPractices}
             isComplexityLoading={isLoadingComplexity}
+            languageMismatchError={languageMismatchError}
+            isVerifyingLanguage={isVerifyingLanguage}
           />
         }
         analysisPanel={
           <AnalysisPanel
             fixSuggestions={fixSuggestions}
             bestPractices={bestPractices}
-            syntaxErrors={syntaxErrors}
+            syntaxErrors={[]} // Placeholder
             complexityAnalysisResult={complexityAnalysisResult}
             isLoadingFixes={isLoadingFixes}
             isLoadingBestPractices={isLoadingBestPractices}

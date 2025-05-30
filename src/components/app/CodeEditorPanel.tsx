@@ -13,46 +13,46 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Play, Activity, Lightbulb, Wand2, CheckCircle2, BrainCircuit, Loader2 } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Activity, Lightbulb, Wand2, CheckCircle2, BrainCircuit, Loader2, AlertCircle, Info } from 'lucide-react';
 
 interface CodeEditorPanelProps {
   code: string;
   onCodeChange: (code: string) => void;
   selectedLanguage: string;
   onLanguageChange: (language: string) => void;
+  languages: Array<{ value: string; label: string }>;
   errorMessage: string;
   onErrorMessageChange: (message: string) => void;
-  onRunCode: () => void; 
-  onAnalyzeComplexity: () => void; 
+  onAnalyzeComplexity: () => void;
   onGetFixSuggestions: () => void;
   onGetBestPractices: () => void;
   isFixesLoading: boolean;
   isBestPracticesLoading: boolean;
   isComplexityLoading: boolean;
+  languageMismatchError: string | null;
+  isVerifyingLanguage: boolean;
 }
-
-const languages = [
-  { value: 'python', label: 'Python' },
-  { value: 'javascript', label: 'JavaScript' },
-  { value: 'cpp', label: 'C++' },
-  { value: 'java', label: 'Java' },
-];
 
 export function CodeEditorPanel({
   code,
   onCodeChange,
   selectedLanguage,
   onLanguageChange,
+  languages,
   errorMessage,
   onErrorMessageChange,
-  onRunCode,
   onAnalyzeComplexity,
   onGetFixSuggestions,
   onGetBestPractices,
   isFixesLoading,
   isBestPracticesLoading,
   isComplexityLoading,
+  languageMismatchError,
+  isVerifyingLanguage,
 }: CodeEditorPanelProps) {
+  const analysisButtonsDisabled = !!languageMismatchError;
+
   return (
     <Card className="h-full flex flex-col shadow-xl">
       <CardHeader>
@@ -62,8 +62,11 @@ export function CodeEditorPanel({
       </CardHeader>
       <CardContent className="flex-grow flex flex-col space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="language-select">Language</Label>
-          <Select value={selectedLanguage} onValueChange={onLanguageChange}>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="language-select">Language</Label>
+            {isVerifyingLanguage && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+          </div>
+          <Select value={selectedLanguage} onValueChange={onLanguageChange} disabled={isVerifyingLanguage}>
             <SelectTrigger id="language-select" className="w-full md:w-[200px]">
               <SelectValue placeholder="Select language" />
             </SelectTrigger>
@@ -76,6 +79,14 @@ export function CodeEditorPanel({
             </SelectContent>
           </Select>
         </div>
+
+        {languageMismatchError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Language Mismatch</AlertTitle>
+            <AlertDescription>{languageMismatchError}</AlertDescription>
+          </Alert>
+        )}
 
         <div className="space-y-2 flex-grow flex flex-col">
           <Label htmlFor="code-editor">Your Code</Label>
@@ -98,14 +109,16 @@ export function CodeEditorPanel({
             onChange={(e) => onErrorMessageChange(e.target.value)}
             className="font-geist-mono h-24 resize-none text-sm p-3 rounded-md shadow-inner bg-background/50"
             aria-label="Error Message Input"
+            disabled={analysisButtonsDisabled}
           />
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-          <Button onClick={onRunCode} variant="outline">
-            <Play className="mr-2 h-4 w-4" /> Run Code
-          </Button>
-          <Button onClick={onAnalyzeComplexity} variant="outline" disabled={isComplexityLoading || !code}>
+          <Button 
+            onClick={onAnalyzeComplexity} 
+            variant="outline" 
+            disabled={isComplexityLoading || !code || analysisButtonsDisabled}
+          >
             {isComplexityLoading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
@@ -113,7 +126,10 @@ export function CodeEditorPanel({
             )}
             Analyze Complexity
           </Button>
-          <Button onClick={onGetFixSuggestions} disabled={isFixesLoading || !code || !errorMessage}>
+          <Button 
+            onClick={onGetFixSuggestions} 
+            disabled={isFixesLoading || !code || !errorMessage || analysisButtonsDisabled}
+          >
             {isFixesLoading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
@@ -121,7 +137,11 @@ export function CodeEditorPanel({
             )}
             Get Fix Suggestions
           </Button>
-          <Button onClick={onGetBestPractices} disabled={isBestPracticesLoading || !code}>
+          <Button 
+            onClick={onGetBestPractices} 
+            disabled={isBestPracticesLoading || !code || analysisButtonsDisabled}
+            className="sm:col-span-2" // Make this button span full width on small screens if only 3 buttons
+          >
             {isBestPracticesLoading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
