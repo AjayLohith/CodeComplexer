@@ -32,11 +32,12 @@ const prompt = ai.definePrompt({
   name: 'analyzeCodeComplexityPrompt',
   input: {schema: AnalyzeCodeComplexityInputSchema},
   output: {schema: AnalyzeCodeComplexityOutputSchema},
-  config: { temperature: 0.2 }, // Add low temperature for consistency
-  prompt: `You are an expert software engineer specializing in algorithm analysis.
+  config: { temperature: 0.2 },
+  prompt: `You are an expert software engineer specializing in algorithm analysis. You must be highly precise and consistent in your analysis.
 
   Analyze the provided code and determine its time and space complexity.
   Provide the complexity in Big O notation.
+  Ensure your analysis, especially for space complexity, is deterministic and does not vary for identical code inputs.
   Also, provide a brief explanation for your analysis.
 
   Language: {{{language}}}

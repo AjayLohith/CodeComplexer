@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Activity, CheckCircle2, BrainCircuit, Loader2 } from 'lucide-react';
+import { Activity, CheckCircle2, Calculator, Loader2 } from 'lucide-react'; // Changed BrainCircuit to Calculator icon
 
 interface CodeEditorPanelProps {
   code: string;
@@ -48,7 +48,7 @@ export function CodeEditorPanel({
     <Card className="h-full flex flex-col shadow-xl">
       <CardHeader>
         <CardTitle className="flex items-center text-xl">
-          <BrainCircuit className="mr-2 h-6 w-6" /> Code Input
+          <Calculator className="mr-2 h-6 w-6" /> Runtime Calculator {/* Changed title and icon */}
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col space-y-4">
@@ -86,7 +86,8 @@ export function CodeEditorPanel({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
           <Button 
             onClick={onAnalyzeComplexity} 
-            disabled={isComplexityLoading || analysisButtonsDisabled} // Use default variant
+            disabled={isComplexityLoading || analysisButtonsDisabled}
+            variant="default" // Ensured default variant
           >
             {isComplexityLoading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
