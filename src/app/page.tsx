@@ -8,7 +8,7 @@ import { CodeEditorPanel } from '@/components/app/CodeEditorPanel';
 import { AnalysisPanel } from '@/components/app/AnalysisPanel';
 import { suggestBestPractices, type SuggestBestPracticesInput } from '@/ai/flows/suggest-best-practices';
 import { analyzeCodeComplexity, type AnalyzeCodeComplexityInput, type AnalyzeCodeComplexityOutput } from '@/ai/flows/analyze-code-complexity';
-import { verifyCodeLanguage, type VerifyCodeLanguageInput } from '@/ai/flows/verify-code-language';
+import { verifyCodeLanguage, type VerifyCodeLanguageInput, type VerifyCodeLanguageOutput } from '@/ai/flows/verify-code-language';
 import { useToast } from '@/hooks/use-toast';
 
 const availableLanguages = [
@@ -38,10 +38,10 @@ export default function CodeComplexerPage() {
   const { toast } = useToast();
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const getLanguageLabel = (value: string): string => {
+  const getLanguageLabel = useCallback((value: string): string => {
     const lang = availableLanguages.find(l => l.value === value);
     return lang ? lang.label : value;
-  };
+  }, []);
 
   const handleVerifyLanguage = useCallback(async (currentCode: string, currentLanguage: SupportedLanguage) => {
     if (!currentCode.trim()) {
@@ -50,7 +50,7 @@ export default function CodeComplexerPage() {
       return;
     }
     setIsVerifyingLanguage(true);
-    setIsLanguageMismatchDetected(false); 
+    // Don't reset isLanguageMismatchDetected here, let the API call decide
 
     try {
       const input: VerifyCodeLanguageInput = {
@@ -58,19 +58,30 @@ export default function CodeComplexerPage() {
         expectedLanguage: currentLanguage,
       };
       const result = await verifyCodeLanguage(input);
+
       if (!result.isMatch) {
         setIsLanguageMismatchDetected(true);
+        let mismatchDescription = `AI suggests this code may not be ${getLanguageLabel(currentLanguage)}.`;
+        if (result.reasoning) {
+          mismatchDescription += ` ${result.reasoning}`;
+        }
+        if (result.actualLanguage) {
+          mismatchDescription += ` Detected: ${getLanguageLabel(result.actualLanguage)} (${result.confidence || 'Confidence not available'}).`;
+        }
         toast({
           title: "Language Mismatch",
-          description: `AI suggests this code might not be ${getLanguageLabel(currentLanguage)}. ${result.reasoning || ''} ${result.actualLanguage ? `Detected: ${getLanguageLabel(result.actualLanguage)} (${result.confidence || 'N/A'}).` : ''}`,
+          description: mismatchDescription,
           variant: "destructive",
         });
-      } else {
+      } else { // Code IS a match
+        if (isLanguageMismatchDetected) { // It was previously a mismatch, now it's fixed
+          toast({
+            title: "Language Verified",
+            description: `AI confirms the code now matches ${getLanguageLabel(currentLanguage)}. ${result.reasoning || ''}`,
+          });
+        }
+        // Always set mismatch to false if it's a match
         setIsLanguageMismatchDetected(false);
-         toast({
-          title: "Language Verified",
-          description: `AI confirms the code matches ${getLanguageLabel(currentLanguage)}. ${result.reasoning || ''}`,
-        });
       }
     } catch (error) {
       console.error("Error verifying code language:", error);
@@ -79,11 +90,12 @@ export default function CodeComplexerPage() {
         description: `Could not verify code language. ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
+      // Assume mismatch if verification fails, to be safe
       setIsLanguageMismatchDetected(true); 
     } finally {
       setIsVerifyingLanguage(false);
     }
-  }, [toast, getLanguageLabel]);
+  }, [toast, getLanguageLabel, isLanguageMismatchDetected]); // Added isLanguageMismatchDetected to dependencies
 
   useEffect(() => {
     if (debounceTimeoutRef.current) {
@@ -167,7 +179,7 @@ export default function CodeComplexerPage() {
       };
       const result = await analyzeCodeComplexity(input);
       setComplexityAnalysisResult(result);
-      setActiveAnalysisTab('complexity');
+      setActiveAnalysisTab('complexity'); // Switch to complexity tab
       toast({
         title: "Complexity Analysis Complete",
         description: "AI has estimated the code's complexity.",
@@ -188,11 +200,13 @@ export default function CodeComplexerPage() {
   useEffect(() => {
     setBestPractices([]);
     setComplexityAnalysisResult(null);
-    setIsLanguageMismatchDetected(false); 
-    if (code.trim() === '') { // If code is cleared, reset tab
-      setActiveAnalysisTab('best-practices');
+    // Don't reset isLanguageMismatchDetected here, let the verification logic handle it.
+    // However, if the selected language changes, or code is cleared, we should clear existing results.
+    if (code.trim() === '') { 
+      setActiveAnalysisTab('best-practices'); // Reset tab if code is cleared
+      setIsLanguageMismatchDetected(false); // Clear mismatch if code is cleared
     }
-  }, [selectedLanguage, code]);
+  }, [selectedLanguage, code]); // React to selectedLanguage and code changes for clearing results
 
   return (
     <div className="flex flex-col h-screen bg-background">
@@ -220,7 +234,7 @@ export default function CodeComplexerPage() {
             isLoadingBestPractices={isLoadingBestPractices}
             isLoadingComplexity={isLoadingComplexity}
             activeTab={activeAnalysisTab}
-            onTabChange={setActiveAnalysisTab}
+            onTabChange={setActiveAnalysisTab} // Allow manual tab changes
           />
         }
       />
