@@ -1,3 +1,4 @@
+
 'use client';
 
 import type * as React from 'react';
@@ -21,8 +22,8 @@ interface CodeEditorPanelProps {
   onLanguageChange: (language: string) => void;
   errorMessage: string;
   onErrorMessageChange: (message: string) => void;
-  onRunCode: () => void; // Placeholder
-  onAnalyzeComplexity: () => void; // Placeholder
+  onRunCode: () => void; 
+  onAnalyzeComplexity: () => void; 
   onGetFixSuggestions: () => void;
   onGetBestPractices: () => void;
   isFixesLoading: boolean;
@@ -99,7 +100,7 @@ export function CodeEditorPanel({
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-          <Button onClick={onRunCode} variant="outline" disabled>
+          <Button onClick={onRunCode} variant="outline">
             <Play className="mr-2 h-4 w-4" /> Run Code
           </Button>
           <Button onClick={onAnalyzeComplexity} variant="outline" disabled>
