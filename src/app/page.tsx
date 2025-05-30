@@ -63,42 +63,45 @@ export default function CodeComplexerPage() {
     if (code === previousCodeRef.current && selectedLanguage === previousLanguageRef.current) {
       return;
     }
+    
+    const currentCode = code;
+    const currentLanguage = selectedLanguage;
 
     debounceTimeoutRef.current = setTimeout(async () => {
       setIsVerifyingLanguage(true);
-      const mismatchStateBeforeVerification = isLanguageMismatchDetected; // Capture state before async call
+      const wasMismatched = isLanguageMismatchDetected; 
 
       try {
-        const input: VerifyCodeLanguageInput = { code, expectedLanguage: selectedLanguage };
+        const input: VerifyCodeLanguageInput = { code: currentCode, expectedLanguage: currentLanguage };
         const result = await verifyCodeLanguage(input);
         
-        setIsLanguageMismatchDetected(!result.isMatch); // Update mismatch state
+        setIsLanguageMismatchDetected(!result.isMatch);
 
         if (!result.isMatch) {
-          let mismatchDescription = `AI suggests this code may not be ${getLanguageLabel(selectedLanguage)}.`;
+          let mismatchDescription = `AI suggests this code may not be ${getLanguageLabel(currentLanguage)}.`;
           if (result.reasoning) mismatchDescription += ` ${result.reasoning}`;
           if (result.actualLanguage) mismatchDescription += ` Detected: ${getLanguageLabel(result.actualLanguage)} (${result.confidence || 'N/A'}).`;
-          toast({ title: "Language Mismatch", description: mismatchDescription, variant: "destructive" });
-        } else if (result.isMatch && mismatchStateBeforeVerification) {
+          toast({ title: "Language Mismatch", description: mismatchDescription, variant: "destructive", duration: 3000 });
+        } else if (result.isMatch && wasMismatched) {
           // Was a mismatch, now it's a match
-          toast({ title: "Language Verified", description: `AI confirms the code now matches ${getLanguageLabel(selectedLanguage)}. ${result.reasoning || ''}` });
+          toast({ title: "Language Verified", description: `AI confirms the code now matches ${getLanguageLabel(currentLanguage)}. ${result.reasoning || ''}`, duration: 3000 });
         }
-        // If it's a match and was already a match, no toast.
       } catch (error) {
         console.error("Error verifying code language:", error);
-        setIsLanguageMismatchDetected(true); // Assume mismatch on error
+        setIsLanguageMismatchDetected(true); 
         toast({
           title: "Language Check Failed",
           description: `Could not verify code language. ${error instanceof Error ? error.message : 'Unknown error'}`,
           variant: "destructive",
+          duration: 3000,
         });
       } finally {
         setIsVerifyingLanguage(false);
       }
     }, 1000);
     
-    previousCodeRef.current = code;
-    previousLanguageRef.current = selectedLanguage;
+    previousCodeRef.current = currentCode;
+    previousLanguageRef.current = currentLanguage;
 
     return () => {
       if (debounceTimeoutRef.current) {
@@ -110,11 +113,11 @@ export default function CodeComplexerPage() {
 
   const handleGetBestPractices = useCallback(async () => {
      if (isLanguageMismatchDetected) {
-       toast({ title: "Language Mismatch", description: "Cannot get best practices. Please ensure the code matches the selected language.", variant: "destructive" });
+       toast({ title: "Language Mismatch", description: "Cannot get best practices. Please ensure the code matches the selected language.", variant: "destructive", duration: 3000 });
        return;
     }
     if (!code.trim()) {
-      toast({ title: "Code Missing", description: "Please provide code to analyze for best practices.", variant: "destructive" });
+      toast({ title: "Code Missing", description: "Please provide code to analyze for best practices.", variant: "destructive", duration: 3000 });
       return;
     }
     setIsLoadingBestPractices(true);
@@ -124,10 +127,10 @@ export default function CodeComplexerPage() {
       const result = await suggestBestPractices(input);
       setBestPractices(result.suggestions);
       setActiveAnalysisTab('best-practices');
-      toast({ title: "Best Practices Analyzed", description: "AI has provided suggestions for best practices." });
+      toast({ title: "Best Practices Analyzed", description: "AI has provided suggestions for best practices.", duration: 3000 });
     } catch (error) {
       console.error("Error getting best practices:", error);
-      toast({ title: "Error", description: `Failed to get best practices. ${error instanceof Error ? error.message : 'Unknown error'}`, variant: "destructive" });
+      toast({ title: "Error", description: `Failed to get best practices. ${error instanceof Error ? error.message : 'Unknown error'}`, variant: "destructive", duration: 3000 });
     } finally {
       setIsLoadingBestPractices(false);
     }
@@ -135,32 +138,30 @@ export default function CodeComplexerPage() {
 
   const handleAnalyzeComplexity = useCallback(async () => {
      if (isLanguageMismatchDetected) {
-       toast({ title: "Language Mismatch", description: "Cannot analyze complexity. Please ensure the code matches the selected language.", variant: "destructive" });
+       toast({ title: "Language Mismatch", description: "Cannot analyze complexity. Please ensure the code matches the selected language.", variant: "destructive", duration: 3000 });
        return;
     }
     if (!code.trim()) {
-      toast({ title: "Code Missing", description: "Please provide code to analyze for complexity.", variant: "destructive" });
+      toast({ title: "Code Missing", description: "Please provide code to analyze for complexity.", variant: "destructive", duration: 3000 });
       return;
     }
     setIsLoadingComplexity(true);
-    setComplexityAnalysisResult(null); // Clear previous results
+    setComplexityAnalysisResult(null); 
     try {
       const input: AnalyzeCodeComplexityInput = { code, language: selectedLanguage };
       const result = await analyzeCodeComplexity(input);
       setComplexityAnalysisResult(result);
       setActiveAnalysisTab('complexity'); 
-      toast({ title: "Complexity Analysis Complete", description: "AI has estimated the code's complexity." });
+      toast({ title: "Complexity Analysis Complete", description: "Analysis complete.", duration: 3000 });
     } catch (error) {
       console.error("Error analyzing complexity:", error);
-      toast({ title: "Error", description: `Failed to analyze complexity. ${error instanceof Error ? error.message : 'Unknown error'}`, variant: "destructive" });
+      toast({ title: "Error", description: `Failed to analyze complexity. ${error instanceof Error ? error.message : 'Unknown error'}`, variant: "destructive", duration: 3000 });
     } finally {
       setIsLoadingComplexity(false);
     }
   }, [code, selectedLanguage, toast, isLanguageMismatchDetected]);
 
   useEffect(() => {
-    // Clear results when language changes or code is significantly altered (cleared)
-    // The main verification useEffect will handle mismatch toasts
     setBestPractices([]);
     setComplexityAnalysisResult(null);
     if (code.trim() === '') { 
