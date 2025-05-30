@@ -8,7 +8,7 @@ import { CodeEditorPanel } from '@/components/app/CodeEditorPanel';
 import { AnalysisPanel } from '@/components/app/AnalysisPanel';
 import { suggestBestPractices, type SuggestBestPracticesInput } from '@/ai/flows/suggest-best-practices';
 import { analyzeCodeComplexity, type AnalyzeCodeComplexityInput, type AnalyzeCodeComplexityOutput } from '@/ai/flows/analyze-code-complexity';
-import { verifyCodeLanguage, type VerifyCodeLanguageInput, type VerifyCodeLanguageOutput } from '@/ai/flows/verify-code-language';
+import { verifyCodeLanguage, type VerifyCodeLanguageInput } from '@/ai/flows/verify-code-language';
 import { useToast } from '@/hooks/use-toast';
 
 const availableLanguages = [
@@ -32,7 +32,7 @@ export default function CodeComplexerPage() {
   
   const [isLanguageMismatchDetected, setIsLanguageMismatchDetected] = useState<boolean>(false);
   const [isVerifyingLanguage, setIsVerifyingLanguage] = useState<boolean>(false);
-  const [activeAnalysisTab, setActiveAnalysisTab] = useState<string>('best-practices');
+  const [activeAnalysisTab, setActiveAnalysisTab] = useState<string>('complexity'); // Default to complexity tab
 
 
   const { toast } = useToast();
@@ -50,7 +50,6 @@ export default function CodeComplexerPage() {
       return;
     }
     setIsVerifyingLanguage(true);
-    // Don't reset isLanguageMismatchDetected here, let the API call decide
 
     try {
       const input: VerifyCodeLanguageInput = {
@@ -66,21 +65,21 @@ export default function CodeComplexerPage() {
           mismatchDescription += ` ${result.reasoning}`;
         }
         if (result.actualLanguage) {
-          mismatchDescription += ` Detected: ${getLanguageLabel(result.actualLanguage)} (${result.confidence || 'Confidence not available'}).`;
+          mismatchDescription += ` Detected: ${getLanguageLabel(result.actualLanguage)} (${result.confidence || 'N/A'}).`;
         }
         toast({
           title: "Language Mismatch",
           description: mismatchDescription,
           variant: "destructive",
         });
-      } else { // Code IS a match
-        if (isLanguageMismatchDetected) { // It was previously a mismatch, now it's fixed
+      } else {
+        // Only show "Verified" toast if it was previously a mismatch
+        if (isLanguageMismatchDetected) {
           toast({
             title: "Language Verified",
             description: `AI confirms the code now matches ${getLanguageLabel(currentLanguage)}. ${result.reasoning || ''}`,
           });
         }
-        // Always set mismatch to false if it's a match
         setIsLanguageMismatchDetected(false);
       }
     } catch (error) {
@@ -90,12 +89,11 @@ export default function CodeComplexerPage() {
         description: `Could not verify code language. ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
-      // Assume mismatch if verification fails, to be safe
       setIsLanguageMismatchDetected(true); 
     } finally {
       setIsVerifyingLanguage(false);
     }
-  }, [toast, getLanguageLabel, isLanguageMismatchDetected]); // Added isLanguageMismatchDetected to dependencies
+  }, [toast, getLanguageLabel, isLanguageMismatchDetected]);
 
   useEffect(() => {
     if (debounceTimeoutRef.current) {
@@ -179,7 +177,7 @@ export default function CodeComplexerPage() {
       };
       const result = await analyzeCodeComplexity(input);
       setComplexityAnalysisResult(result);
-      setActiveAnalysisTab('complexity'); // Switch to complexity tab
+      setActiveAnalysisTab('complexity'); 
       toast({
         title: "Complexity Analysis Complete",
         description: "AI has estimated the code's complexity.",
@@ -200,13 +198,14 @@ export default function CodeComplexerPage() {
   useEffect(() => {
     setBestPractices([]);
     setComplexityAnalysisResult(null);
-    // Don't reset isLanguageMismatchDetected here, let the verification logic handle it.
-    // However, if the selected language changes, or code is cleared, we should clear existing results.
     if (code.trim() === '') { 
-      setActiveAnalysisTab('best-practices'); // Reset tab if code is cleared
-      setIsLanguageMismatchDetected(false); // Clear mismatch if code is cleared
+      // Reset to complexity tab if code is cleared and it's not already the active one
+      if (activeAnalysisTab !== 'complexity') {
+        setActiveAnalysisTab('complexity'); 
+      }
+      setIsLanguageMismatchDetected(false); 
     }
-  }, [selectedLanguage, code]); // React to selectedLanguage and code changes for clearing results
+  }, [selectedLanguage, code, activeAnalysisTab]); // Add activeAnalysisTab to dependencies
 
   return (
     <div className="flex flex-col h-screen bg-background">
@@ -234,7 +233,7 @@ export default function CodeComplexerPage() {
             isLoadingBestPractices={isLoadingBestPractices}
             isLoadingComplexity={isLoadingComplexity}
             activeTab={activeAnalysisTab}
-            onTabChange={setActiveAnalysisTab} // Allow manual tab changes
+            onTabChange={setActiveAnalysisTab} 
           />
         }
       />

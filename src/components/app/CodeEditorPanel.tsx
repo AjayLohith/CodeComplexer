@@ -86,8 +86,7 @@ export function CodeEditorPanel({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
           <Button 
             onClick={onAnalyzeComplexity} 
-            variant="outline" 
-            disabled={isComplexityLoading || analysisButtonsDisabled}
+            disabled={isComplexityLoading || analysisButtonsDisabled} // Use default variant
           >
             {isComplexityLoading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
