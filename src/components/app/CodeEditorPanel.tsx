@@ -28,6 +28,7 @@ interface CodeEditorPanelProps {
   onGetBestPractices: () => void;
   isFixesLoading: boolean;
   isBestPracticesLoading: boolean;
+  isComplexityLoading: boolean;
 }
 
 const languages = [
@@ -50,6 +51,7 @@ export function CodeEditorPanel({
   onGetBestPractices,
   isFixesLoading,
   isBestPracticesLoading,
+  isComplexityLoading,
 }: CodeEditorPanelProps) {
   return (
     <Card className="h-full flex flex-col shadow-xl">
@@ -103,8 +105,13 @@ export function CodeEditorPanel({
           <Button onClick={onRunCode} variant="outline">
             <Play className="mr-2 h-4 w-4" /> Run Code
           </Button>
-          <Button onClick={onAnalyzeComplexity} variant="outline" disabled>
-            <Activity className="mr-2 h-4 w-4" /> Analyze Complexity
+          <Button onClick={onAnalyzeComplexity} variant="outline" disabled={isComplexityLoading || !code}>
+            {isComplexityLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Activity className="mr-2 h-4 w-4" />
+            )}
+            Analyze Complexity
           </Button>
           <Button onClick={onGetFixSuggestions} disabled={isFixesLoading || !code || !errorMessage}>
             {isFixesLoading ? (

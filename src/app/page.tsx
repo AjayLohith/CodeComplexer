@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
@@ -7,6 +8,7 @@ import { CodeEditorPanel } from '@/components/app/CodeEditorPanel';
 import { AnalysisPanel } from '@/components/app/AnalysisPanel';
 import { suggestCodeFixes, type SuggestCodeFixesInput } from '@/ai/flows/suggest-code-fixes';
 import { suggestBestPractices, type SuggestBestPracticesInput } from '@/ai/flows/suggest-best-practices';
+import { analyzeCodeComplexity, type AnalyzeCodeComplexityInput, type AnalyzeCodeComplexityOutput } from '@/ai/flows/analyze-code-complexity';
 import { useToast } from '@/hooks/use-toast';
 
 const languageMapForFixes: { [key: string]: 'Python' | 'JavaScript' | 'C++' | 'Java' } = {
@@ -16,6 +18,13 @@ const languageMapForFixes: { [key: string]: 'Python' | 'JavaScript' | 'C++' | 'J
   java: 'Java',
 };
 
+const languageMapForComplexity: { [key: string]: 'python' | 'javascript' | 'cpp' | 'java' } = {
+  python: 'python',
+  javascript: 'javascript',
+  cpp: 'cpp',
+  java: 'java',
+};
+
 export default function CodeSightPage() {
   const [code, setCode] = useState<string>('');
   const [selectedLanguage, setSelectedLanguage] = useState<string>('python');
@@ -23,15 +32,17 @@ export default function CodeSightPage() {
   
   const [fixSuggestions, setFixSuggestions] = useState<string[]>([]);
   const [bestPractices, setBestPractices] = useState<string[]>([]);
+  const [complexityAnalysisResult, setComplexityAnalysisResult] = useState<AnalyzeCodeComplexityOutput | null>(null);
   
   const [isLoadingFixes, setIsLoadingFixes] = useState<boolean>(false);
   const [isLoadingBestPractices, setIsLoadingBestPractices] = useState<boolean>(false);
+  const [isLoadingComplexity, setIsLoadingComplexity] = useState<boolean>(false);
 
   const { toast } = useToast();
 
-  // Placeholder states for features not yet implemented
+  // Placeholder state for features not yet implemented
   const [syntaxErrors, setSyntaxErrors] = useState<string[]>([]);
-  const [complexityResult, setComplexityResult] = useState<string>('');
+
 
   const handleGetFixSuggestions = useCallback(async () => {
     if (!code || !errorMessage) {
@@ -86,7 +97,7 @@ export default function CodeSightPage() {
     try {
       const input: SuggestBestPracticesInput = { 
         code, 
-        language: selectedLanguage as 'python' | 'javascript' | 'cpp' | 'java' // Cast based on select options
+        language: selectedLanguage as 'python' | 'javascript' | 'cpp' | 'java' 
       };
       const result = await suggestBestPractices(input);
       setBestPractices(result.suggestions);
@@ -106,18 +117,53 @@ export default function CodeSightPage() {
     }
   }, [code, selectedLanguage, toast]);
 
-  // Placeholder functions
+  const handleAnalyzeComplexity = useCallback(async () => {
+    if (!code) {
+      toast({
+        title: "Code Missing",
+        description: "Please provide code to analyze for complexity.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsLoadingComplexity(true);
+    setComplexityAnalysisResult(null);
+    try {
+      const langForComplexity = languageMapForComplexity[selectedLanguage];
+      if (!langForComplexity) {
+        throw new Error("Invalid language selected for complexity analysis.");
+      }
+      const input: AnalyzeCodeComplexityInput = { 
+        code, 
+        language: langForComplexity
+      };
+      const result = await analyzeCodeComplexity(input);
+      setComplexityAnalysisResult(result);
+      toast({
+        title: "Complexity Analysis Complete",
+        description: "AI has estimated the code's complexity.",
+      });
+    } catch (error) {
+      console.error("Error analyzing complexity:", error);
+      toast({
+        title: "Error",
+        description: `Failed to analyze complexity. ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingComplexity(false);
+    }
+  }, [code, selectedLanguage, toast]);
+
   const handleRunCode = () => {
     toast({ title: "Feature Not Implemented", description: "Code execution is coming soon!"});
-  };
-  const handleAnalyzeComplexity = () => {
-    toast({ title: "Feature Not Implemented", description: "Complexity analysis is coming soon!"});
   };
 
   // Effect to clear results when language changes
   useEffect(() => {
     setFixSuggestions([]);
     setBestPractices([]);
+    setComplexityAnalysisResult(null);
   }, [selectedLanguage]);
 
   return (
@@ -138,6 +184,7 @@ export default function CodeSightPage() {
             onGetBestPractices={handleGetBestPractices}
             isFixesLoading={isLoadingFixes}
             isBestPracticesLoading={isLoadingBestPractices}
+            isComplexityLoading={isLoadingComplexity}
           />
         }
         analysisPanel={
@@ -145,9 +192,10 @@ export default function CodeSightPage() {
             fixSuggestions={fixSuggestions}
             bestPractices={bestPractices}
             syntaxErrors={syntaxErrors}
-            complexityResult={complexityResult}
+            complexityAnalysisResult={complexityAnalysisResult}
             isLoadingFixes={isLoadingFixes}
             isLoadingBestPractices={isLoadingBestPractices}
+            isLoadingComplexity={isLoadingComplexity}
           />
         }
       />
