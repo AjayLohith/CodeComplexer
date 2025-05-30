@@ -51,6 +51,7 @@ export function AnalysisPanel({
         <ul className="space-y-3 p-1">
           {bestPractices.map((suggestion, index) => (
             <li key={index} className="p-3 bg-muted/50 rounded-md shadow text-sm">
+              {/* Using pre with font-geist-sans for best practices suggestions to maintain formatting but use regular font */}
               <pre className="whitespace-pre-wrap font-geist-sans">{suggestion}</pre>
             </li>
           ))}
@@ -114,6 +115,7 @@ export function AnalysisPanel({
                   <CardTitle className="text-lg">Explanation</CardTitle>
                 </CardHeader>
                 <CardContent>
+                  {/* Using pre with font-geist-sans for explanation to maintain formatting but use regular font */}
                   <pre className="whitespace-pre-wrap font-geist-sans text-sm bg-muted/50 p-3 rounded-md">
                     {complexityAnalysisResult.explanation}
                   </pre>
@@ -149,3 +151,4 @@ export function AnalysisPanel({
     </Card>
   );
 }
+    
