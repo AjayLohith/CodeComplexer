@@ -2,22 +2,21 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Calculator, Moon, Sun } from 'lucide-react'; // Changed CodeXml to Calculator, added Moon and Sun
+import { Calculator, Moon, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export function Header() {
-  const [theme, setTheme] = useState('dark'); // Default to dark
+  const [theme, setTheme] = useState('dark'); 
 
   useEffect(() => {
     const storedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     
-    let initialTheme = 'dark'; // Default to dark
+    let initialTheme = 'dark'; 
 
     if (storedTheme) {
       initialTheme = storedTheme;
     } else {
-       // If no stored theme, respect OS preference but default to dark if no preference detected
       initialTheme = prefersDark ? 'dark' : 'light'; 
     }
     
@@ -27,7 +26,7 @@ export function Header() {
     } else {
       document.documentElement.classList.add('dark');
     }
-    localStorage.setItem('theme', initialTheme); // Ensure localStorage is set on first load
+    localStorage.setItem('theme', initialTheme);
 
   }, []);
 
@@ -55,7 +54,7 @@ export function Header() {
           onClick={toggleTheme} 
           variant="ghost" 
           size="icon" 
-          className="text-primary-foreground hover:bg-primary/80 focus-visible:ring-primary-foreground"
+          className="text-primary-foreground hover:bg-primary-foreground/10 focus-visible:ring-primary-foreground"
           aria-label="Toggle theme"
         >
           {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}

@@ -134,15 +134,15 @@ export function AnalysisPanel({
       <CardContent className="flex-grow">
         <Tabs value={activeTab} onValueChange={onTabChange} className="h-full flex flex-col">
           <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="best-practices"><CheckCircle2 className="mr-1 h-4 w-4 inline-block"/>Practices</TabsTrigger>
             <TabsTrigger value="complexity"><BarChartBig className="mr-1 h-4 w-4 inline-block"/>Complexity</TabsTrigger>
+            <TabsTrigger value="best-practices"><CheckCircle2 className="mr-1 h-4 w-4 inline-block"/>Practices</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="best-practices" className="flex-grow overflow-auto">
-            {renderBestPractices()}
-          </TabsContent>
           <TabsContent value="complexity" className="flex-grow overflow-auto">
             {renderComplexityAnalysis()}
+          </TabsContent>
+          <TabsContent value="best-practices" className="flex-grow overflow-auto">
+            {renderBestPractices()}
           </TabsContent>
         </Tabs>
       </CardContent>

@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Activity, CheckCircle2, Calculator, Loader2 } from 'lucide-react'; // Changed BrainCircuit to Calculator icon
+import { Activity, CheckCircle2, Calculator, Loader2 } from 'lucide-react';
 
 interface CodeEditorPanelProps {
   code: string;
@@ -48,7 +48,7 @@ export function CodeEditorPanel({
     <Card className="h-full flex flex-col shadow-xl">
       <CardHeader>
         <CardTitle className="flex items-center text-xl">
-          <Calculator className="mr-2 h-6 w-6" /> Runtime Calculator {/* Changed title and icon */}
+          <Calculator className="mr-2 h-6 w-6" /> Runtime Calculator
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col space-y-4">
@@ -87,7 +87,8 @@ export function CodeEditorPanel({
           <Button 
             onClick={onAnalyzeComplexity} 
             disabled={isComplexityLoading || analysisButtonsDisabled}
-            variant="default" // Ensured default variant
+            variant="default"
+            className="transform transition-transform duration-75 ease-out active:scale-95"
           >
             {isComplexityLoading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -99,6 +100,7 @@ export function CodeEditorPanel({
           <Button 
             onClick={onGetBestPractices} 
             disabled={isBestPracticesLoading || analysisButtonsDisabled}
+            className="transform transition-transform duration-75 ease-out active:scale-95"
           >
             {isBestPracticesLoading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
