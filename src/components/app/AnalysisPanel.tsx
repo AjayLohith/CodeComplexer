@@ -4,13 +4,12 @@
 import type { AnalyzeCodeComplexityOutput } from '@/ai/flows/analyze-code-complexity';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertTriangle, BarChartBig, CheckCircle2, Loader2, Info, Clock, Scaling } from 'lucide-react';
+import { BarChartBig, CheckCircle2, Loader2, Info, Clock, Scaling } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface AnalysisPanelProps {
   bestPractices: string[];
-  syntaxErrors: string[]; 
   complexityAnalysisResult: AnalyzeCodeComplexityOutput | null;
   isLoadingBestPractices: boolean;
   isLoadingComplexity: boolean;
@@ -20,7 +19,6 @@ interface AnalysisPanelProps {
 
 export function AnalysisPanel({
   bestPractices,
-  syntaxErrors,
   complexityAnalysisResult,
   isLoadingBestPractices,
   isLoadingComplexity,
@@ -37,13 +35,13 @@ export function AnalysisPanel({
         </div>
       );
     }
-    if (bestPractices.length === 0) {
+    if (bestPractices.length === 0 && !isLoadingBestPractices) {
       return (
         <Alert variant="default" className="mt-4">
           <Info className="h-4 w-4" />
           <AlertTitle>No Best Practices Available</AlertTitle>
           <AlertDescription>
-            There are no best practices to display at the moment. Try generating some!
+            Enter some code and click "Get Best Practices" to see AI suggestions.
           </AlertDescription>
         </Alert>
       );
@@ -70,59 +68,62 @@ export function AnalysisPanel({
         </div>
       );
     }
-    if (!complexityAnalysisResult) {
+    if (!complexityAnalysisResult && !isLoadingComplexity) {
       return (
         <Alert variant="default" className="mt-4">
           <Info className="h-4 w-4" />
           <AlertTitle>No Complexity Analysis Available</AlertTitle>
           <AlertDescription>
-            Click "Analyze Complexity" in the code input panel to estimate your code's complexity.
+            Enter some code and click "Analyze Complexity" to estimate its time and space complexity.
           </AlertDescription>
         </Alert>
       );
     }
-    return (
-      <ScrollArea className="h-full max-h-[calc(100vh-250px)]">
-        <div className="space-y-4 p-1">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center">
-                <Clock className="mr-2 h-5 w-5 text-primary" />
-                Time Complexity
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-semibold font-geist-mono text-primary">
-                {complexityAnalysisResult.timeComplexity}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center">
-                <Scaling className="mr-2 h-5 w-5 text-primary" />
-                Space Complexity
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-semibold font-geist-mono text-primary">
-                {complexityAnalysisResult.spaceComplexity}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Explanation</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <pre className="whitespace-pre-wrap font-geist-mono text-sm bg-muted/50 p-3 rounded-md">
-                {complexityAnalysisResult.explanation}
-              </pre>
-            </CardContent>
-          </Card>
-        </div>
-      </ScrollArea>
-    );
+     if (complexityAnalysisResult) {
+        return (
+          <ScrollArea className="h-full max-h-[calc(100vh-250px)]">
+            <div className="space-y-4 p-1">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg flex items-center">
+                    <Clock className="mr-2 h-5 w-5 text-primary" />
+                    Time Complexity
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-semibold font-geist-mono text-primary">
+                    {complexityAnalysisResult.timeComplexity}
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg flex items-center">
+                    <Scaling className="mr-2 h-5 w-5 text-primary" />
+                    Space Complexity
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-semibold font-geist-mono text-primary">
+                    {complexityAnalysisResult.spaceComplexity}
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg">Explanation</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <pre className="whitespace-pre-wrap font-geist-mono text-sm bg-muted/50 p-3 rounded-md">
+                    {complexityAnalysisResult.explanation}
+                  </pre>
+                </CardContent>
+              </Card>
+            </div>
+          </ScrollArea>
+        );
+    }
+    return null;
   };
 
   return (
@@ -132,23 +133,13 @@ export function AnalysisPanel({
       </CardHeader>
       <CardContent className="flex-grow">
         <Tabs value={activeTab} onValueChange={onTabChange} className="h-full flex flex-col">
-          <TabsList className="grid w-full grid-cols-3 mb-4">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
             <TabsTrigger value="best-practices"><CheckCircle2 className="mr-1 h-4 w-4 inline-block"/>Practices</TabsTrigger>
-            <TabsTrigger value="errors" disabled><AlertTriangle className="mr-1 h-4 w-4 inline-block"/>Errors</TabsTrigger>
             <TabsTrigger value="complexity"><BarChartBig className="mr-1 h-4 w-4 inline-block"/>Complexity</TabsTrigger>
           </TabsList>
           
           <TabsContent value="best-practices" className="flex-grow overflow-auto">
             {renderBestPractices()}
-          </TabsContent>
-          <TabsContent value="errors" className="flex-grow overflow-auto">
-             <Alert variant="default" className="mt-4">
-              <Info className="h-4 w-4" />
-              <AlertTitle>Real-time Error Detection</AlertTitle>
-              <AlertDescription>
-                This feature is planned. Syntax errors will be displayed here.
-              </AlertDescription>
-            </Alert>
           </TabsContent>
           <TabsContent value="complexity" className="flex-grow overflow-auto">
             {renderComplexityAnalysis()}

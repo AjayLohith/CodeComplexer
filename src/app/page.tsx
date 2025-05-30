@@ -46,10 +46,11 @@ export default function CodeComplexerPage() {
   const handleVerifyLanguage = useCallback(async (currentCode: string, currentLanguage: SupportedLanguage) => {
     if (!currentCode.trim()) {
       setIsLanguageMismatchDetected(false);
+      setIsVerifyingLanguage(false);
       return;
     }
     setIsVerifyingLanguage(true);
-    setIsLanguageMismatchDetected(false); // Clear previous mismatch before new check
+    setIsLanguageMismatchDetected(false); 
 
     try {
       const input: VerifyCodeLanguageInput = {
@@ -61,11 +62,15 @@ export default function CodeComplexerPage() {
         setIsLanguageMismatchDetected(true);
         toast({
           title: "Language Mismatch",
-          description: `AI suggests this might not be ${getLanguageLabel(currentLanguage)} code. ${result.reasoning || ''} ${result.actualLanguage ? `Detected: ${getLanguageLabel(result.actualLanguage)} (${result.confidence || 'N/A'}).` : ''}`,
+          description: `AI suggests this code might not be ${getLanguageLabel(currentLanguage)}. ${result.reasoning || ''} ${result.actualLanguage ? `Detected: ${getLanguageLabel(result.actualLanguage)} (${result.confidence || 'N/A'}).` : ''}`,
           variant: "destructive",
         });
       } else {
         setIsLanguageMismatchDetected(false);
+         toast({
+          title: "Language Verified",
+          description: `AI confirms the code matches ${getLanguageLabel(currentLanguage)}. ${result.reasoning || ''}`,
+        });
       }
     } catch (error) {
       console.error("Error verifying code language:", error);
@@ -74,23 +79,23 @@ export default function CodeComplexerPage() {
         description: `Could not verify code language. ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
-      setIsLanguageMismatchDetected(true); // Assume mismatch on error to be safe
+      setIsLanguageMismatchDetected(true); 
     } finally {
       setIsVerifyingLanguage(false);
     }
-  }, [toast]);
+  }, [toast, getLanguageLabel]);
 
   useEffect(() => {
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
     }
-    if (code.trim()) { // Only verify if there's code
+    if (code.trim()) { 
       debounceTimeoutRef.current = setTimeout(() => {
         handleVerifyLanguage(code, selectedLanguage);
-      }, 1000); // 1-second debounce
+      }, 1000); 
     } else {
-      setIsLanguageMismatchDetected(false); // No code, no mismatch
-      setIsVerifyingLanguage(false); // Not verifying if no code
+      setIsLanguageMismatchDetected(false); 
+      setIsVerifyingLanguage(false); 
     }
 
     return () => {
@@ -103,10 +108,10 @@ export default function CodeComplexerPage() {
 
   const handleGetBestPractices = useCallback(async () => {
      if (isLanguageMismatchDetected) {
-       toast({ title: "Language Mismatch", description: "Cannot get best practices due to language mismatch.", variant: "destructive" });
+       toast({ title: "Language Mismatch", description: "Cannot get best practices. Please ensure the code matches the selected language.", variant: "destructive" });
        return;
     }
-    if (!code) {
+    if (!code.trim()) {
       toast({
         title: "Code Missing",
         description: "Please provide code to analyze for best practices.",
@@ -142,10 +147,10 @@ export default function CodeComplexerPage() {
 
   const handleAnalyzeComplexity = useCallback(async () => {
      if (isLanguageMismatchDetected) {
-       toast({ title: "Language Mismatch", description: "Cannot analyze complexity due to language mismatch.", variant: "destructive" });
+       toast({ title: "Language Mismatch", description: "Cannot analyze complexity. Please ensure the code matches the selected language.", variant: "destructive" });
        return;
     }
-    if (!code) {
+    if (!code.trim()) {
       toast({
         title: "Code Missing",
         description: "Please provide code to analyze for complexity.",
@@ -180,13 +185,14 @@ export default function CodeComplexerPage() {
     }
   }, [code, selectedLanguage, toast, isLanguageMismatchDetected]);
 
-  // Effect to clear results and errors when language changes
   useEffect(() => {
     setBestPractices([]);
     setComplexityAnalysisResult(null);
     setIsLanguageMismatchDetected(false); 
-    setActiveAnalysisTab('best-practices'); // Reset to default tab
-  }, [selectedLanguage]);
+    if (code.trim() === '') { // If code is cleared, reset tab
+      setActiveAnalysisTab('best-practices');
+    }
+  }, [selectedLanguage, code]);
 
   return (
     <div className="flex flex-col h-screen bg-background">
@@ -210,7 +216,6 @@ export default function CodeComplexerPage() {
         analysisPanel={
           <AnalysisPanel
             bestPractices={bestPractices}
-            syntaxErrors={[]} 
             complexityAnalysisResult={complexityAnalysisResult}
             isLoadingBestPractices={isLoadingBestPractices}
             isLoadingComplexity={isLoadingComplexity}
