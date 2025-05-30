@@ -82,7 +82,7 @@ const verifyCodeLanguageFlow = ai.defineFlow(
       // Fallback or error handling if prompt returns no output
       return {
         isMatch: false,
-        reasoning: 'AI could not determine the language.',
+        reasoning: 'Could not determine the language.',
         confidence: 'Low',
         actualLanguage: 'unknown'
       };

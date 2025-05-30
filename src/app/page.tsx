@@ -8,7 +8,7 @@ import { CodeEditorPanel } from '@/components/app/CodeEditorPanel';
 import { AnalysisPanel } from '@/components/app/AnalysisPanel';
 import { suggestBestPractices, type SuggestBestPracticesInput } from '@/ai/flows/suggest-best-practices';
 import { analyzeCodeComplexity, type AnalyzeCodeComplexityInput, type AnalyzeCodeComplexityOutput } from '@/ai/flows/analyze-code-complexity';
-import { verifyCodeLanguage, type VerifyCodeLanguageInput } from '@/ai/flows/verify-code-language'; // Removed VerifyCodeLanguageOutput import as type is inferred
+import { verifyCodeLanguage, type VerifyCodeLanguageInput } from '@/ai/flows/verify-code-language';
 import { useToast } from '@/hooks/use-toast';
 
 const availableLanguages = [
@@ -51,7 +51,6 @@ export default function CodeComplexerPage() {
       clearTimeout(debounceTimeoutRef.current);
     }
 
-    // Capture current code and language for the debounced function
     const currentCode = code;
     const currentLanguage = selectedLanguage;
 
@@ -63,13 +62,10 @@ export default function CodeComplexerPage() {
       return;
     }
 
-    // Only run if code or language actually changed
     if (currentCode === previousCodeRef.current && currentLanguage === previousLanguageRef.current) {
       return;
     }
     
-    // Store the mismatch state *before* this verification run
-    // This helps decide if a "Language Matches" toast is needed (i.e., changed from mismatch to match)
     const wasPreviouslyMismatched = isLanguageMismatchDetected;
 
     debounceTimeoutRef.current = setTimeout(async () => {
@@ -82,21 +78,15 @@ export default function CodeComplexerPage() {
         setIsLanguageMismatchDetected(isNowMismatched);
 
         const languageLabel = getLanguageLabel(currentLanguage);
-        let toastDescription = result.reasoning || '';
-        if (!result.isMatch && result.actualLanguage) {
-            toastDescription += ` Detected: ${getLanguageLabel(result.actualLanguage)} (${result.confidence || 'N/A'}).`;
-        }
-
-
+        
         if (isNowMismatched) {
           toast({ 
             title: "Language Mismatch", 
-            description: `AI suggests this code might not be ${languageLabel}. ${toastDescription}`.trim(),
+            description: "", // Simplified: remove detailed description
             variant: "destructive", 
             duration: 3000 
           });
         } else if (!isNowMismatched && wasPreviouslyMismatched) {
-          // Was a mismatch, now it's a match
           toast({ 
             title: "Language Matches", 
             description: `AI confirms the code matches ${languageLabel}. ${result.reasoning || ''}`.trim(),
@@ -105,7 +95,6 @@ export default function CodeComplexerPage() {
         }
       } catch (error) {
         console.error("Error verifying code language:", error);
-        // Assume mismatch on error to be safe, and inform user
         setIsLanguageMismatchDetected(true); 
         toast({
           title: "Language Check Failed",
@@ -116,7 +105,7 @@ export default function CodeComplexerPage() {
       } finally {
         setIsVerifyingLanguage(false);
       }
-    }, 1000); // 1-second debounce
+    }, 1000); 
     
     previousCodeRef.current = currentCode;
     previousLanguageRef.current = currentLanguage;
@@ -126,8 +115,7 @@ export default function CodeComplexerPage() {
         clearTimeout(debounceTimeoutRef.current);
       }
     };
-  // Removed isLanguageMismatchDetected from dependencies to prevent potential loops
-  }, [code, selectedLanguage, toast, getLanguageLabel]);
+  }, [code, selectedLanguage, toast, getLanguageLabel, isLanguageMismatchDetected]);
 
 
   const handleGetBestPractices = useCallback(async () => {
@@ -140,7 +128,7 @@ export default function CodeComplexerPage() {
       return;
     }
     setIsLoadingBestPractices(true);
-    setBestPractices([]); // Clear only previous best practices
+    // Do not clear complexityAnalysisResult here
     try {
       const input: SuggestBestPracticesInput = { code, language: selectedLanguage };
       const result = await suggestBestPractices(input);
@@ -165,7 +153,7 @@ export default function CodeComplexerPage() {
       return;
     }
     setIsLoadingComplexity(true);
-    setComplexityAnalysisResult(null); // Clear only previous complexity results
+    // Do not clear bestPractices here
     try {
       const input: AnalyzeCodeComplexityInput = { code, language: selectedLanguage };
       const result = await analyzeCodeComplexity(input);
@@ -180,15 +168,22 @@ export default function CodeComplexerPage() {
     }
   }, [code, selectedLanguage, toast, isLanguageMismatchDetected]);
 
-  // Effect to clear results if code or language changes, making previous analysis stale
-  useEffect(() => {
-    setBestPractices([]);
-    setComplexityAnalysisResult(null);
-    if (code.trim() === '') { 
-      setActiveAnalysisTab('complexity'); // Default to complexity tab if code is empty
-      setIsLanguageMismatchDetected(false); // No mismatch if no code
+  // Effect to clear results only if code is empty or language changes, making previous analysis stale
+   useEffect(() => {
+    // Only clear if the code itself is cleared OR the language changes
+    // This prevents clearing data when just typing more code in the same language
+    if (previousCodeRef.current !== code && code.trim() === '') {
+      setBestPractices([]);
+      setComplexityAnalysisResult(null);
+      setActiveAnalysisTab('complexity');
+      setIsLanguageMismatchDetected(false);
+    } else if (previousLanguageRef.current !== selectedLanguage) {
+      setBestPractices([]);
+      setComplexityAnalysisResult(null);
+      setActiveAnalysisTab('complexity'); 
     }
-  }, [selectedLanguage, code]); // Removed activeAnalysisTab from here as it was causing unnecessary clears
+  }, [selectedLanguage, code]);
+
 
   return (
     <div className="flex flex-col h-screen bg-background">
