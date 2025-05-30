@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Activity, CheckCircle2, Calculator, Loader2 } from 'lucide-react';
+import { Activity, Lightbulb, Calculator, Loader2 } from 'lucide-react'; // Changed CheckCircle2 to Lightbulb
 
 interface CodeEditorPanelProps {
   code: string;
@@ -43,6 +43,8 @@ export function CodeEditorPanel({
   isVerifyingLanguage,
 }: CodeEditorPanelProps) {
   const analysisButtonsDisabled = isLanguageMismatchDetected || !code.trim() || isVerifyingLanguage;
+  const suggestionsButtonDisabled = isBestPracticesLoading || analysisButtonsDisabled;
+  const complexityButtonDisabled = isComplexityLoading || analysisButtonsDisabled;
 
   return (
     <Card className="h-full flex flex-col shadow-xl">
@@ -72,7 +74,23 @@ export function CodeEditorPanel({
         </div>
 
         <div className="space-y-2 flex-grow flex flex-col">
-          <Label htmlFor="code-editor">Your Code</Label>
+          <div className="flex justify-between items-center mb-1">
+            <Label htmlFor="code-editor">Your Code</Label>
+            <Button
+              onClick={onGetBestPractices}
+              disabled={suggestionsButtonDisabled}
+              size="sm"
+              variant="outline"
+              className="transform transition-transform duration-75 ease-out active:scale-95"
+            >
+              {isBestPracticesLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Lightbulb className="mr-2 h-4 w-4" />
+              )}
+              Suggestions
+            </Button>
+          </div>
           <Textarea
             id="code-editor"
             placeholder="Enter your code here..."
@@ -83,12 +101,12 @@ export function CodeEditorPanel({
           />
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+        <div className="pt-2">
           <Button 
             onClick={onAnalyzeComplexity} 
-            disabled={isComplexityLoading || analysisButtonsDisabled}
+            disabled={complexityButtonDisabled}
             variant="default"
-            className="transform transition-transform duration-75 ease-out active:scale-95"
+            className="w-full transform transition-transform duration-75 ease-out active:scale-95"
           >
             {isComplexityLoading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -96,18 +114,6 @@ export function CodeEditorPanel({
               <Activity className="mr-2 h-4 w-4" />
             )}
             Analyze Complexity
-          </Button>
-          <Button 
-            onClick={onGetBestPractices} 
-            disabled={isBestPracticesLoading || analysisButtonsDisabled}
-            className="transform transition-transform duration-75 ease-out active:scale-95"
-          >
-            {isBestPracticesLoading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <CheckCircle2 className="mr-2 h-4 w-4" />
-            )}
-            Get Best Practices
           </Button>
         </div>
       </CardContent>
