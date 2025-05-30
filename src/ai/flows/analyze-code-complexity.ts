@@ -32,6 +32,7 @@ const prompt = ai.definePrompt({
   name: 'analyzeCodeComplexityPrompt',
   input: {schema: AnalyzeCodeComplexityInputSchema},
   output: {schema: AnalyzeCodeComplexityOutputSchema},
+  config: { temperature: 0.2 }, // Add low temperature for consistency
   prompt: `You are an expert software engineer specializing in algorithm analysis.
 
   Analyze the provided code and determine its time and space complexity.

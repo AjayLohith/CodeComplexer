@@ -51,7 +51,7 @@ export function AnalysisPanel({
         <ul className="space-y-3 p-1">
           {bestPractices.map((suggestion, index) => (
             <li key={index} className="p-3 bg-muted/50 rounded-md shadow text-sm">
-              <pre className="whitespace-pre-wrap font-geist-mono">{suggestion}</pre>
+              <pre className="whitespace-pre-wrap font-geist-sans">{suggestion}</pre>
             </li>
           ))}
         </ul>
@@ -114,7 +114,7 @@ export function AnalysisPanel({
                   <CardTitle className="text-lg">Explanation</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <pre className="whitespace-pre-wrap font-geist-mono text-sm bg-muted/50 p-3 rounded-md">
+                  <pre className="whitespace-pre-wrap font-geist-sans text-sm bg-muted/50 p-3 rounded-md">
                     {complexityAnalysisResult.explanation}
                   </pre>
                 </CardContent>
