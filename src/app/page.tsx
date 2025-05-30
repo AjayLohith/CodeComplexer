@@ -2,14 +2,29 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { Header } from '@/components/app/Header';
 import { MainLayout } from '@/components/app/MainLayout';
 import { CodeEditorPanel } from '@/components/app/CodeEditorPanel';
-import { AnalysisPanel } from '@/components/app/AnalysisPanel';
+// import { AnalysisPanel } from '@/components/app/AnalysisPanel'; // Removed direct import
+import type { AnalyzeCodeComplexityOutput } from '@/ai/flows/analyze-code-complexity';
 import { suggestBestPractices, type SuggestBestPracticesInput } from '@/ai/flows/suggest-best-practices';
-import { analyzeCodeComplexity, type AnalyzeCodeComplexityInput, type AnalyzeCodeComplexityOutput } from '@/ai/flows/analyze-code-complexity';
-import { verifyCodeLanguage, type VerifyCodeLanguageInput } from '@/ai/flows/verify-code-language';
+import { analyzeCodeComplexity, type AnalyzeCodeComplexityInput } from '@/ai/flows/analyze-code-complexity';
+import { verifyCodeLanguage, type VerifyCodeLanguageInput, type VerifyCodeLanguageOutput } from '@/ai/flows/verify-code-language';
 import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
+
+const AnalysisPanel = dynamic(() => import('@/components/app/AnalysisPanel').then(mod => mod.AnalysisPanel), {
+  ssr: false, // Analysis panel is client-side interactive
+  loading: () => (
+    <div className="p-4 h-full flex flex-col">
+      <Skeleton className="h-10 w-1/2 mb-4" />
+      <Skeleton className="h-8 w-full mb-2" />
+      <Skeleton className="flex-grow w-full" />
+    </div>
+  ),
+});
+
 
 const availableLanguages = [
   { value: 'python', label: 'Python' },
@@ -45,7 +60,6 @@ export default function CodeComplexerPage() {
     return lang ? lang.label : value;
   }, []);
 
-  // Effect for handling language verification and toasting
   useEffect(() => {
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
@@ -54,14 +68,16 @@ export default function CodeComplexerPage() {
     const currentCode = code;
     const currentLanguage = selectedLanguage;
 
+    // Only clear mismatch if code is empty
     if (!currentCode.trim()) {
       setIsLanguageMismatchDetected(false);
-      setIsVerifyingLanguage(false);
-      previousCodeRef.current = currentCode;
+      setIsVerifyingLanguage(false); // Stop verification if code is cleared
+      previousCodeRef.current = currentCode; // Update refs
       previousLanguageRef.current = currentLanguage;
       return;
     }
-
+    
+    // Only verify if code or language actually changed from the last verified state
     if (currentCode === previousCodeRef.current && currentLanguage === previousLanguageRef.current) {
       return;
     }
@@ -75,24 +91,25 @@ export default function CodeComplexerPage() {
         const result = await verifyCodeLanguage(input);
         
         const isNowMismatched = !result.isMatch;
-        setIsLanguageMismatchDetected(isNowMismatched);
+        setIsLanguageMismatchDetected(isNowMismatched); // Update mismatch state based on API
         
         if (isNowMismatched) {
           toast({ 
-            title: "Language Mismatch", 
+            title: "Language Mismatch",
             description: "", // Simplified
             variant: "destructive", 
             duration: 3000 
           });
-        } else if (!isNowMismatched && wasPreviouslyMismatched) {
+        } else if (wasPreviouslyMismatched) { // Only show "matched" if it was previously mismatched
           toast({ 
-            title: "Language Matched", 
+            title: "Language Matches", 
             description: "", // Simplified
             duration: 3000 
           });
         }
       } catch (error) {
         console.error("Error verifying code language:", error);
+        // Assume mismatch on error to be safe, or handle as neutral
         setIsLanguageMismatchDetected(true); 
         toast({
           title: "Language Check Failed",
@@ -102,18 +119,20 @@ export default function CodeComplexerPage() {
         });
       } finally {
         setIsVerifyingLanguage(false);
+        // Update refs *after* verification attempt
+        previousCodeRef.current = currentCode;
+        previousLanguageRef.current = currentLanguage;
       }
-    }, 1000); 
-    
-    previousCodeRef.current = currentCode;
-    previousLanguageRef.current = currentLanguage;
+    }, 1000); // 1-second debounce
 
     return () => {
       if (debounceTimeoutRef.current) {
         clearTimeout(debounceTimeoutRef.current);
       }
     };
-  }, [code, selectedLanguage, toast, getLanguageLabel, isLanguageMismatchDetected]);
+  // Re-run effect if code or selected language changes.
+  // isLanguageMismatchDetected is removed to avoid loops with wasPreviouslyMismatched logic
+  }, [code, selectedLanguage, toast, getLanguageLabel]);
 
 
   const handleGetBestPractices = useCallback(async () => {
@@ -126,6 +145,7 @@ export default function CodeComplexerPage() {
       return;
     }
     setIsLoadingBestPractices(true);
+    setBestPractices([]); // Clear previous results
     try {
       const input: SuggestBestPracticesInput = { code, language: selectedLanguage };
       const result = await suggestBestPractices(input);
@@ -150,6 +170,7 @@ export default function CodeComplexerPage() {
       return;
     }
     setIsLoadingComplexity(true);
+    setComplexityAnalysisResult(null); // Clear previous results
     try {
       const input: AnalyzeCodeComplexityInput = { code, language: selectedLanguage };
       const result = await analyzeCodeComplexity(input);
@@ -164,17 +185,21 @@ export default function CodeComplexerPage() {
     }
   }, [code, selectedLanguage, toast, isLanguageMismatchDetected]);
 
-  // Effect to clear results only if code is empty or language changes, making previous analysis stale
    useEffect(() => {
-    if (previousCodeRef.current !== code && code.trim() === '') {
+    // If code is empty, clear all results and reset language mismatch
+    if (code.trim() === '' && previousCodeRef.current !== '') { // Check if it was not already empty
       setBestPractices([]);
       setComplexityAnalysisResult(null);
-      setActiveAnalysisTab('complexity');
-      setIsLanguageMismatchDetected(false);
-    } else if (previousLanguageRef.current !== selectedLanguage) {
+      setActiveAnalysisTab('complexity'); // Reset to default tab
+      setIsLanguageMismatchDetected(false); // Reset mismatch state
+    } 
+    // If only the language changes (and code is not empty), clear results
+    // This prevents stale analysis for a different language
+    else if (selectedLanguage !== previousLanguageRef.current && code.trim() !== '') {
       setBestPractices([]);
       setComplexityAnalysisResult(null);
       setActiveAnalysisTab('complexity'); 
+      // Language verification effect will handle mismatch detection for new language
     }
   }, [selectedLanguage, code]);
 
