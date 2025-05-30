@@ -140,11 +140,10 @@ export function AnalysisPanel({
             <TabsTrigger value="best-practices"><CheckCircle2 className="mr-1 h-4 w-4 inline-block"/>Practices</TabsTrigger>
           </TabsList>
           
-          {/* Removed overflow-auto from TabsContent, relying on ScrollArea within */}
-          <TabsContent value="complexity" className="flex-grow">
+          <TabsContent value="complexity" className="flex-grow min-h-0">
             {renderComplexityAnalysis()}
           </TabsContent>
-          <TabsContent value="best-practices" className="flex-grow">
+          <TabsContent value="best-practices" className="flex-grow min-h-0">
             {renderBestPractices()}
           </TabsContent>
         </Tabs>
