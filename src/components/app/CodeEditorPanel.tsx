@@ -1,4 +1,3 @@
-
 'use client';
 
 import type * as React from 'react';
@@ -13,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Activity, Lightbulb, Calculator, Loader2 } from 'lucide-react'; // Changed CheckCircle2 to Lightbulb
+import { Activity, Lightbulb, Calculator, Loader2 } from 'lucide-react';
 
 interface CodeEditorPanelProps {
   code: string;
@@ -42,9 +41,12 @@ export function CodeEditorPanel({
   isLanguageMismatchDetected,
   isVerifyingLanguage,
 }: CodeEditorPanelProps) {
-  const analysisButtonsDisabled = isLanguageMismatchDetected || !code.trim() || isVerifyingLanguage;
-  const suggestionsButtonDisabled = isBestPracticesLoading || analysisButtonsDisabled;
-  const complexityButtonDisabled = isComplexityLoading || analysisButtonsDisabled;
+  const analysisButtonsDisabled =
+    isLanguageMismatchDetected || !code.trim() || isVerifyingLanguage;
+  const suggestionsButtonDisabled =
+    isBestPracticesLoading || analysisButtonsDisabled;
+  const complexityButtonDisabled =
+    isComplexityLoading || analysisButtonsDisabled;
 
   return (
     <Card className="h-full flex flex-col shadow-xl">
@@ -57,10 +59,19 @@ export function CodeEditorPanel({
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label htmlFor="language-select">Language</Label>
-            {isVerifyingLanguage && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+            {isVerifyingLanguage && (
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            )}
           </div>
-          <Select value={selectedLanguage} onValueChange={onLanguageChange} disabled={isVerifyingLanguage}>
-            <SelectTrigger id="language-select" className="w-full md:w-[200px]">
+          <Select
+            value={selectedLanguage}
+            onValueChange={onLanguageChange}
+            disabled={isVerifyingLanguage}
+          >
+            <SelectTrigger
+              id="language-select"
+              className="w-full md:w-[200px]"
+            >
               <SelectValue placeholder="Select language" />
             </SelectTrigger>
             <SelectContent>
@@ -100,10 +111,10 @@ export function CodeEditorPanel({
             aria-label="Code Editor"
           />
         </div>
-        
+
         <div className="pt-2">
-          <Button 
-            onClick={onAnalyzeComplexity} 
+          <Button
+            onClick={onAnalyzeComplexity}
             disabled={complexityButtonDisabled}
             variant="default"
             className="w-full transform transition-transform duration-75 ease-out active:scale-95"
