@@ -76,20 +76,18 @@ export default function CodeComplexerPage() {
         
         const isNowMismatched = !result.isMatch;
         setIsLanguageMismatchDetected(isNowMismatched);
-
-        const languageLabel = getLanguageLabel(currentLanguage);
         
         if (isNowMismatched) {
           toast({ 
             title: "Language Mismatch", 
-            description: "", // Simplified: remove detailed description
+            description: "", // Simplified
             variant: "destructive", 
             duration: 3000 
           });
         } else if (!isNowMismatched && wasPreviouslyMismatched) {
           toast({ 
             title: "Language Matches", 
-            description: `AI confirms the code matches ${languageLabel}. ${result.reasoning || ''}`.trim(),
+            description: "", // Simplified
             duration: 3000 
           });
         }
@@ -128,7 +126,6 @@ export default function CodeComplexerPage() {
       return;
     }
     setIsLoadingBestPractices(true);
-    // Do not clear complexityAnalysisResult here
     try {
       const input: SuggestBestPracticesInput = { code, language: selectedLanguage };
       const result = await suggestBestPractices(input);
@@ -153,7 +150,6 @@ export default function CodeComplexerPage() {
       return;
     }
     setIsLoadingComplexity(true);
-    // Do not clear bestPractices here
     try {
       const input: AnalyzeCodeComplexityInput = { code, language: selectedLanguage };
       const result = await analyzeCodeComplexity(input);
@@ -170,8 +166,6 @@ export default function CodeComplexerPage() {
 
   // Effect to clear results only if code is empty or language changes, making previous analysis stale
    useEffect(() => {
-    // Only clear if the code itself is cleared OR the language changes
-    // This prevents clearing data when just typing more code in the same language
     if (previousCodeRef.current !== code && code.trim() === '') {
       setBestPractices([]);
       setComplexityAnalysisResult(null);
