@@ -10,13 +10,14 @@ export function Header() {
 
   useEffect(() => {
     const storedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    // Ensure window is defined (runs only on client)
+    const prefersDark = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     
     let initialTheme = 'dark'; 
 
     if (storedTheme) {
       initialTheme = storedTheme;
-    } else {
+    } else if (typeof window !== 'undefined') { // Check window again for prefersDark
       initialTheme = prefersDark ? 'dark' : 'light'; 
     }
     
@@ -26,14 +27,19 @@ export function Header() {
     } else {
       document.documentElement.classList.add('dark');
     }
-    localStorage.setItem('theme', initialTheme);
+    // Only set localStorage if running on client
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('theme', initialTheme);
+    }
 
   }, []);
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('theme', newTheme);
+    }
     if (newTheme === 'light') {
       document.documentElement.classList.remove('dark');
     } else {
@@ -55,7 +61,7 @@ export function Header() {
           variant="ghost" 
           size="icon" 
           className="text-primary-foreground hover:bg-primary-foreground/10 focus-visible:ring-primary-foreground"
-          aria-label="Toggle theme"
+          aria-label={theme === 'light' ? "Switch to dark theme" : "Switch to light theme"}
         >
           {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
         </Button>
