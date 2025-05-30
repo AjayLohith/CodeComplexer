@@ -6,10 +6,9 @@ import { Header } from '@/components/app/Header';
 import { MainLayout } from '@/components/app/MainLayout';
 import { CodeEditorPanel } from '@/components/app/CodeEditorPanel';
 import { AnalysisPanel } from '@/components/app/AnalysisPanel';
-import { suggestCodeFixes, type SuggestCodeFixesInput } from '@/ai/flows/suggest-code-fixes';
 import { suggestBestPractices, type SuggestBestPracticesInput } from '@/ai/flows/suggest-best-practices';
 import { analyzeCodeComplexity, type AnalyzeCodeComplexityInput, type AnalyzeCodeComplexityOutput } from '@/ai/flows/analyze-code-complexity';
-import { verifyCodeLanguage, type VerifyCodeLanguageInput, type VerifyCodeLanguageOutput } from '@/ai/flows/verify-code-language';
+import { verifyCodeLanguage, type VerifyCodeLanguageInput } from '@/ai/flows/verify-code-language';
 import { useToast } from '@/hooks/use-toast';
 
 const availableLanguages = [
@@ -19,36 +18,22 @@ const availableLanguages = [
   { value: 'java', label: 'Java' },
 ];
 
-const languageMapForFixes: { [key: string]: 'Python' | 'JavaScript' | 'C++' | 'Java' } = {
-  python: 'Python',
-  javascript: 'JavaScript',
-  cpp: 'C++',
-  java: 'Java',
-};
+type SupportedLanguage = 'python' | 'javascript' | 'cpp' | 'java';
 
-const languageMapForAnalysis: { [key: string]: 'python' | 'javascript' | 'cpp' | 'java' } = {
-  python: 'python',
-  javascript: 'javascript',
-  cpp: 'cpp',
-  java: 'java',
-};
-
-
-export default function CodeSightPage() {
+export default function CodeComplexerPage() {
   const [code, setCode] = useState<string>('');
-  const [selectedLanguage, setSelectedLanguage] = useState<string>('python');
-  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [selectedLanguage, setSelectedLanguage] = useState<SupportedLanguage>('python');
   
-  const [fixSuggestions, setFixSuggestions] = useState<string[]>([]);
   const [bestPractices, setBestPractices] = useState<string[]>([]);
   const [complexityAnalysisResult, setComplexityAnalysisResult] = useState<AnalyzeCodeComplexityOutput | null>(null);
   
-  const [isLoadingFixes, setIsLoadingFixes] = useState<boolean>(false);
   const [isLoadingBestPractices, setIsLoadingBestPractices] = useState<boolean>(false);
   const [isLoadingComplexity, setIsLoadingComplexity] = useState<boolean>(false);
   
-  const [languageMismatchError, setLanguageMismatchError] = useState<string | null>(null);
+  const [isLanguageMismatchDetected, setIsLanguageMismatchDetected] = useState<boolean>(false);
   const [isVerifyingLanguage, setIsVerifyingLanguage] = useState<boolean>(false);
+  const [activeAnalysisTab, setActiveAnalysisTab] = useState<string>('best-practices');
+
 
   const { toast } = useToast();
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -58,30 +43,29 @@ export default function CodeSightPage() {
     return lang ? lang.label : value;
   };
 
-  const handleVerifyLanguage = useCallback(async (currentCode: string, currentLanguage: string) => {
+  const handleVerifyLanguage = useCallback(async (currentCode: string, currentLanguage: SupportedLanguage) => {
     if (!currentCode.trim()) {
-      setLanguageMismatchError(null);
+      setIsLanguageMismatchDetected(false);
       return;
     }
     setIsVerifyingLanguage(true);
-    setLanguageMismatchError(null); // Clear previous error
+    setIsLanguageMismatchDetected(false); // Clear previous mismatch before new check
 
     try {
-      const langForVerification = languageMapForAnalysis[currentLanguage];
-      if (!langForVerification) {
-        throw new Error("Invalid language selected for verification.");
-      }
       const input: VerifyCodeLanguageInput = {
         code: currentCode,
-        expectedLanguage: langForVerification,
+        expectedLanguage: currentLanguage,
       };
       const result = await verifyCodeLanguage(input);
       if (!result.isMatch) {
-        setLanguageMismatchError(
-          `AI suggests this might not be ${getLanguageLabel(currentLanguage)} code. ${result.reasoning || ''} ${result.actualLanguage ? `Detected: ${getLanguageLabel(result.actualLanguage)} (${result.confidence || 'N/A'}).` : ''}`
-        );
+        setIsLanguageMismatchDetected(true);
+        toast({
+          title: "Language Mismatch",
+          description: `AI suggests this might not be ${getLanguageLabel(currentLanguage)} code. ${result.reasoning || ''} ${result.actualLanguage ? `Detected: ${getLanguageLabel(result.actualLanguage)} (${result.confidence || 'N/A'}).` : ''}`,
+          variant: "destructive",
+        });
       } else {
-        setLanguageMismatchError(null);
+        setIsLanguageMismatchDetected(false);
       }
     } catch (error) {
       console.error("Error verifying code language:", error);
@@ -90,8 +74,7 @@ export default function CodeSightPage() {
         description: `Could not verify code language. ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
-      // Optionally set a generic mismatch error or allow proceeding
-      // setLanguageMismatchError("Could not automatically verify the code's language.");
+      setIsLanguageMismatchDetected(true); // Assume mismatch on error to be safe
     } finally {
       setIsVerifyingLanguage(false);
     }
@@ -101,9 +84,14 @@ export default function CodeSightPage() {
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
     }
-    debounceTimeoutRef.current = setTimeout(() => {
-      handleVerifyLanguage(code, selectedLanguage);
-    }, 1000); // 1-second debounce
+    if (code.trim()) { // Only verify if there's code
+      debounceTimeoutRef.current = setTimeout(() => {
+        handleVerifyLanguage(code, selectedLanguage);
+      }, 1000); // 1-second debounce
+    } else {
+      setIsLanguageMismatchDetected(false); // No code, no mismatch
+      setIsVerifyingLanguage(false); // Not verifying if no code
+    }
 
     return () => {
       if (debounceTimeoutRef.current) {
@@ -113,51 +101,8 @@ export default function CodeSightPage() {
   }, [code, selectedLanguage, handleVerifyLanguage]);
 
 
-  const handleGetFixSuggestions = useCallback(async () => {
-    if (languageMismatchError) {
-       toast({ title: "Language Mismatch", description: "Cannot get suggestions due to language mismatch.", variant: "destructive" });
-       return;
-    }
-    if (!code || !errorMessage) {
-      toast({
-        title: "Input Missing",
-        description: "Please provide both code and an error message for fix suggestions.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setIsLoadingFixes(true);
-    setFixSuggestions([]);
-    try {
-      const langForFixes = languageMapForFixes[selectedLanguage];
-      if (!langForFixes) {
-        throw new Error("Invalid language selected for fix suggestions.");
-      }
-      const input: SuggestCodeFixesInput = { 
-        code, 
-        language: langForFixes,
-        errorMessage 
-      };
-      const result = await suggestCodeFixes(input);
-      setFixSuggestions(result.suggestions);
-      toast({
-        title: "Fix Suggestions Ready",
-        description: "AI has generated potential fixes for your code.",
-      });
-    } catch (error) {
-      console.error("Error getting fix suggestions:", error);
-      toast({
-        title: "Error",
-        description: `Failed to get fix suggestions. ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoadingFixes(false);
-    }
-  }, [code, selectedLanguage, errorMessage, toast, languageMismatchError]);
-
   const handleGetBestPractices = useCallback(async () => {
-     if (languageMismatchError) {
+     if (isLanguageMismatchDetected) {
        toast({ title: "Language Mismatch", description: "Cannot get best practices due to language mismatch.", variant: "destructive" });
        return;
     }
@@ -172,16 +117,13 @@ export default function CodeSightPage() {
     setIsLoadingBestPractices(true);
     setBestPractices([]);
     try {
-      const langForAnalysis = languageMapForAnalysis[selectedLanguage];
-       if (!langForAnalysis) {
-        throw new Error("Invalid language selected for best practices analysis.");
-      }
       const input: SuggestBestPracticesInput = { 
         code, 
-        language: langForAnalysis 
+        language: selectedLanguage
       };
       const result = await suggestBestPractices(input);
       setBestPractices(result.suggestions);
+      setActiveAnalysisTab('best-practices');
       toast({
         title: "Best Practices Analyzed",
         description: "AI has provided suggestions for best practices.",
@@ -196,10 +138,10 @@ export default function CodeSightPage() {
     } finally {
       setIsLoadingBestPractices(false);
     }
-  }, [code, selectedLanguage, toast, languageMismatchError]);
+  }, [code, selectedLanguage, toast, isLanguageMismatchDetected]);
 
   const handleAnalyzeComplexity = useCallback(async () => {
-     if (languageMismatchError) {
+     if (isLanguageMismatchDetected) {
        toast({ title: "Language Mismatch", description: "Cannot analyze complexity due to language mismatch.", variant: "destructive" });
        return;
     }
@@ -214,16 +156,13 @@ export default function CodeSightPage() {
     setIsLoadingComplexity(true);
     setComplexityAnalysisResult(null);
     try {
-      const langForComplexity = languageMapForAnalysis[selectedLanguage];
-      if (!langForComplexity) {
-        throw new Error("Invalid language selected for complexity analysis.");
-      }
       const input: AnalyzeCodeComplexityInput = { 
         code, 
-        language: langForComplexity
+        language: selectedLanguage
       };
       const result = await analyzeCodeComplexity(input);
       setComplexityAnalysisResult(result);
+      setActiveAnalysisTab('complexity');
       toast({
         title: "Complexity Analysis Complete",
         description: "AI has estimated the code's complexity.",
@@ -239,14 +178,14 @@ export default function CodeSightPage() {
     } finally {
       setIsLoadingComplexity(false);
     }
-  }, [code, selectedLanguage, toast, languageMismatchError]);
+  }, [code, selectedLanguage, toast, isLanguageMismatchDetected]);
 
-  // Effect to clear results and errors when language changes (but not the mismatch error itself from this effect)
+  // Effect to clear results and errors when language changes
   useEffect(() => {
-    setFixSuggestions([]);
     setBestPractices([]);
     setComplexityAnalysisResult(null);
-    // setLanguageMismatchError(null); // This is handled by the debounced effect
+    setIsLanguageMismatchDetected(false); 
+    setActiveAnalysisTab('best-practices'); // Reset to default tab
   }, [selectedLanguage]);
 
   return (
@@ -258,29 +197,25 @@ export default function CodeSightPage() {
             code={code}
             onCodeChange={setCode}
             selectedLanguage={selectedLanguage}
-            onLanguageChange={setSelectedLanguage}
+            onLanguageChange={(langValue) => setSelectedLanguage(langValue as SupportedLanguage)}
             languages={availableLanguages}
-            errorMessage={errorMessage}
-            onErrorMessageChange={setErrorMessage}
             onAnalyzeComplexity={handleAnalyzeComplexity}
-            onGetFixSuggestions={handleGetFixSuggestions}
             onGetBestPractices={handleGetBestPractices}
-            isFixesLoading={isLoadingFixes}
             isBestPracticesLoading={isLoadingBestPractices}
             isComplexityLoading={isLoadingComplexity}
-            languageMismatchError={languageMismatchError}
+            isLanguageMismatchDetected={isLanguageMismatchDetected}
             isVerifyingLanguage={isVerifyingLanguage}
           />
         }
         analysisPanel={
           <AnalysisPanel
-            fixSuggestions={fixSuggestions}
             bestPractices={bestPractices}
-            syntaxErrors={[]} // Placeholder
+            syntaxErrors={[]} 
             complexityAnalysisResult={complexityAnalysisResult}
-            isLoadingFixes={isLoadingFixes}
             isLoadingBestPractices={isLoadingBestPractices}
             isLoadingComplexity={isLoadingComplexity}
+            activeTab={activeAnalysisTab}
+            onTabChange={setActiveAnalysisTab}
           />
         }
       />

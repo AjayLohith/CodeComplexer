@@ -13,8 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Activity, Lightbulb, Wand2, CheckCircle2, BrainCircuit, Loader2, AlertCircle, Info } from 'lucide-react';
+import { Activity, CheckCircle2, BrainCircuit, Loader2 } from 'lucide-react';
 
 interface CodeEditorPanelProps {
   code: string;
@@ -22,15 +21,11 @@ interface CodeEditorPanelProps {
   selectedLanguage: string;
   onLanguageChange: (language: string) => void;
   languages: Array<{ value: string; label: string }>;
-  errorMessage: string;
-  onErrorMessageChange: (message: string) => void;
   onAnalyzeComplexity: () => void;
-  onGetFixSuggestions: () => void;
   onGetBestPractices: () => void;
-  isFixesLoading: boolean;
   isBestPracticesLoading: boolean;
   isComplexityLoading: boolean;
-  languageMismatchError: string | null;
+  isLanguageMismatchDetected: boolean;
   isVerifyingLanguage: boolean;
 }
 
@@ -40,18 +35,14 @@ export function CodeEditorPanel({
   selectedLanguage,
   onLanguageChange,
   languages,
-  errorMessage,
-  onErrorMessageChange,
   onAnalyzeComplexity,
-  onGetFixSuggestions,
   onGetBestPractices,
-  isFixesLoading,
   isBestPracticesLoading,
   isComplexityLoading,
-  languageMismatchError,
+  isLanguageMismatchDetected,
   isVerifyingLanguage,
 }: CodeEditorPanelProps) {
-  const analysisButtonsDisabled = !!languageMismatchError;
+  const analysisButtonsDisabled = isLanguageMismatchDetected || !code.trim() || isVerifyingLanguage;
 
   return (
     <Card className="h-full flex flex-col shadow-xl">
@@ -80,14 +71,6 @@ export function CodeEditorPanel({
           </Select>
         </div>
 
-        {languageMismatchError && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Language Mismatch</AlertTitle>
-            <AlertDescription>{languageMismatchError}</AlertDescription>
-          </Alert>
-        )}
-
         <div className="space-y-2 flex-grow flex flex-col">
           <Label htmlFor="code-editor">Your Code</Label>
           <Textarea
@@ -95,21 +78,8 @@ export function CodeEditorPanel({
             placeholder="Enter your code here..."
             value={code}
             onChange={(e) => onCodeChange(e.target.value)}
-            className="font-geist-mono h-full min-h-[200px] flex-grow resize-none text-sm p-3 rounded-md shadow-inner bg-background/50"
+            className="font-geist-mono h-full min-h-[250px] flex-grow resize-none text-sm p-3 rounded-md shadow-inner bg-background/50"
             aria-label="Code Editor"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="error-message">Error Message (for Fix Suggestions)</Label>
-          <Textarea
-            id="error-message"
-            placeholder="Enter any error message you're seeing..."
-            value={errorMessage}
-            onChange={(e) => onErrorMessageChange(e.target.value)}
-            className="font-geist-mono h-24 resize-none text-sm p-3 rounded-md shadow-inner bg-background/50"
-            aria-label="Error Message Input"
-            disabled={analysisButtonsDisabled}
           />
         </div>
         
@@ -117,7 +87,7 @@ export function CodeEditorPanel({
           <Button 
             onClick={onAnalyzeComplexity} 
             variant="outline" 
-            disabled={isComplexityLoading || !code || analysisButtonsDisabled}
+            disabled={isComplexityLoading || analysisButtonsDisabled}
           >
             {isComplexityLoading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -127,20 +97,8 @@ export function CodeEditorPanel({
             Analyze Complexity
           </Button>
           <Button 
-            onClick={onGetFixSuggestions} 
-            disabled={isFixesLoading || !code || !errorMessage || analysisButtonsDisabled}
-          >
-            {isFixesLoading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Wand2 className="mr-2 h-4 w-4" />
-            )}
-            Get Fix Suggestions
-          </Button>
-          <Button 
             onClick={onGetBestPractices} 
-            disabled={isBestPracticesLoading || !code || analysisButtonsDisabled}
-            className="sm:col-span-2" // Make this button span full width on small screens if only 3 buttons
+            disabled={isBestPracticesLoading || analysisButtonsDisabled}
           >
             {isBestPracticesLoading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

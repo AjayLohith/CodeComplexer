@@ -5,7 +5,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'CodeSight - Intelligent Code Analyzer',
+  title: 'CodeComplexer - Intelligent Code Analyzer',
   description: 'An intelligent code editor with real-time analysis and AI-powered suggestions.',
 };
 

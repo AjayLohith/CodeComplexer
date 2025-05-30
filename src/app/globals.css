@@ -50,19 +50,19 @@ body {
     --card-foreground: 210 40% 98%;
     --popover: 207 12% 20%;
     --popover-foreground: 210 40% 98%;
-    --primary: 273 40% 45%; /* Deep purple #6A3EA1 for interactive elements */
-    --primary-foreground: 273 40% 95%; /* Light text on primary buttons */
+    --primary: 275 100% 25%; /* Dark Indigo #4B0082 */
+    --primary-foreground: 0 0% 98%; /* White/very light gray for text on primary */
     --secondary: 207 12% 25%; /* Slightly lighter than card */
     --secondary-foreground: 210 40% 98%;
     --muted: 207 12% 25%;
     --muted-foreground: 210 40% 60%; /* Less prominent text */
     --accent: 273 40% 45%; /* Deep purple #6A3EA1 */
-    --accent-foreground: 273 40% 95%;
+    --accent-foreground: 273 40% 95%; /* Light text on accent elements */
     --destructive: 0 62.8% 30.6%; /* Default dark destructive */
     --destructive-foreground: 0 0% 98%;
     --border: 207 12% 30%; /* Darker border */
     --input: 207 12% 30%; /* Input background */
-    --ring: 273 40% 55%; /* Ring for focus, related to primary/accent */
+    --ring: 275 100% 35%; /* Ring for focus, related to primary */
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
