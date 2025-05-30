@@ -47,7 +47,7 @@ export function AnalysisPanel({
       );
     }
     return (
-      <ScrollArea className="h-full max-h-[calc(100vh-250px)]">
+      <ScrollArea className="h-full">
         <ul className="space-y-3 p-1">
           {bestPractices.map((suggestion, index) => (
             <li key={index} className="p-3 bg-muted/50 rounded-md shadow text-sm">
@@ -82,7 +82,7 @@ export function AnalysisPanel({
     }
      if (complexityAnalysisResult) {
         return (
-          <ScrollArea className="h-full max-h-[calc(100vh-250px)]">
+          <ScrollArea className="h-full">
             <div className="space-y-4 p-1">
               <Card>
                 <CardHeader className="pb-2">

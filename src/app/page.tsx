@@ -86,7 +86,7 @@ export default function CodeComplexerPage() {
           });
         } else if (!isNowMismatched && wasPreviouslyMismatched) {
           toast({ 
-            title: "Language Matches", 
+            title: "Language Matched", 
             description: "", // Simplified
             duration: 3000 
           });
